@@ -1,2 +1,2 @@
 # gdal_utils
-GDAL and OGR utilities
+Wrappers for GDAL and OGR binaries and python bindings on Windows
