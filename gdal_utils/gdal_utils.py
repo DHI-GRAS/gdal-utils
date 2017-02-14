@@ -457,6 +457,13 @@ def save_same_format(samplefile, outfile, array, tgt_nodata=None, **kwargs):
     return array_to_gtiff(array, outfile, tgt_nodata=tgt_nodata, **kw)
 
 
+def dump_gtiff(dsmem, outfile):
+    """Dump MEM dataset to GeoTIFF outfile"""
+    drv = gdal.GetDriverByName('GTiff')
+    dstif = drv.CreateCopy(outfile, dsmem)
+    gdal.Close(dstif)
+
+
 def gdal_set_nodata(tiffile, tempdir=None, src_nodata=None):
     """Set value to nodata on tiffile "in-place"
 
@@ -614,8 +621,7 @@ def warp_reproject_py(infile, outfile, t_epsg=4326, r='near'):
         driver = 'VRT'
     else:
         driver = 'GTiff'
-    dst_ds = gdal.GetDriverByName(driver).CreateCopy(outfile, tmp_ds)
-    dst_ds = None
+    gdal.GetDriverByName(driver).CreateCopy(outfile, tmp_ds)
     check_gdal_success(outfile, 'gdalwarp')
 
 
