@@ -11,7 +11,7 @@ import numpy as np
 import sys
 import ogr
 
-from graspy.gdal_scripts import gdal_merge as gdal_merge_py
+from .gdal_scripts import gdal_merge as gdal_merge_py
 
 
 def find_gdal_exe(gdalcmd):
