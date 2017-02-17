@@ -244,9 +244,10 @@ def retrieve_array_masked(infile, iband=None, tgt_dtype=None):
         return get_array(ds, iband, tgt_dtype)
 
 
-def get_array(ds, iband=1, tgt_dtype=None, tgt_nodata=None):
+def get_array(ds, iband=None, tgt_dtype=None, tgt_nodata=None):
     """Returns a masked array from open GDAL dataset"""
-    if not iband:
+    if iband is None:
+        # read all bands
         a = ds.ReadAsArray()
         src_nodata = ds.GetRasterBand(1).GetNoDataValue()
     else:
