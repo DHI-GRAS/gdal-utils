@@ -256,9 +256,11 @@ def get_array(ds, iband=None, tgt_dtype=None, tgt_nodata=None):
         src_nodata = ds.GetRasterBand(1).GetNoDataValue()
 
     if src_nodata is not None:
-        try:
-            mask = np.isclose(a, src_nodata)
-        except TypeError:
+        if a.dtype == 'f':
+            # floating point comparison
+            mask = np.abs(a - src_nodata) < 1e-10  # np.isclose uses way too much memory
+        else:
+            # integer
             mask = a == src_nodata
     else:
         mask = ~np.isfinite(a)
