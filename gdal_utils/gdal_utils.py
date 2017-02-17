@@ -460,8 +460,7 @@ def save_same_format(samplefile, outfile, array, tgt_nodata=None, **kwargs):
 def dump_gtiff(dsmem, outfile):
     """Dump MEM dataset to GeoTIFF outfile"""
     drv = gdal.GetDriverByName('GTiff')
-    dstif = drv.CreateCopy(outfile, dsmem)
-    gdal.Close(dstif)
+    drv.CreateCopy(outfile, dsmem)
 
 
 def gdal_set_nodata(tiffile, tempdir=None, src_nodata=None):
@@ -792,7 +791,8 @@ def clipRasterWithShape(rasterImg, shapeImg):
     ulY = rasterGeoTrans[3] + round((shapeRasterGeoTrans[3] - rasterGeoTrans[3]) / rasterGeoTrans[5]) * rasterGeoTrans[
         5]
     shapeRasterGeoTrans = (
-    ulX, shapeRasterGeoTrans[1], shapeRasterGeoTrans[2], ulY, shapeRasterGeoTrans[4], shapeRasterGeoTrans[5])
+            ulX, shapeRasterGeoTrans[1], shapeRasterGeoTrans[2],
+            ulY, shapeRasterGeoTrans[4], shapeRasterGeoTrans[5])
 
     # get minimum covering extent for the raster and the shape and covert them
     # to pixels
@@ -852,14 +852,14 @@ def buffer_extent(extent, geotransform):
     # with a UL corner of a pixel in the source layer. Then the BR corner is rounded to the BR corner of
     # the closest pixel. So if the north(west) pixel is closer then south(east) then the clipped layer will
     # not include all of the area specified in the extent.
-    shiftWest = float(e[0])%geotransform[1]
-    if 0 < float(e[1])%geotransform[1]/geotransform[1] < 0.5:
+    shiftWest = float(e[0]) % geotransform[1]
+    if 0 < float(e[1]) % geotransform[1] / geotransform[1] < 0.5:
         east = float(e[1]) + geotransform[1]
     else:
         east = float(e[1])
     e[1] = str(east + shiftWest)
-    shiftNorth = float(e[3])%geotransform[5]
-    if 0 < float(e[2])%geotransform[5]/geotransform[5] < 0.5:
+    shiftNorth = float(e[3]) % geotransform[5]
+    if 0 < float(e[2]) % geotransform[5] / geotransform[5] < 0.5:
         south = float(e[2]) + geotransform[5]
     else:
         south = float(e[2])
