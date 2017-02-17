@@ -264,7 +264,7 @@ def get_array(ds, iband=None, tgt_dtype=None, tgt_nodata=None):
         mask = ~np.isfinite(a)
     tgt_dtype = tgt_dtype or str(a.dtype)
     tgt_nodata = tgt_nodata if tgt_nodata is not None else get_default_nodata(tgt_dtype)
-    a_masked = np.ma.masked_where(mask, a)
+    a_masked = np.ma.masked_where(mask, a, copy=False)
     a_masked.set_fill_value(tgt_nodata)
     return a_masked.astype(tgt_dtype)
 
