@@ -163,7 +163,7 @@ def cmd_gdalwarp_reproject_cutline(intif, inshp, outtif, t_srs, r='near',
     cmd += [intif, outtif]
     return cmd
 
-def cmd_gdalbuildvrt(infiles, outfile, resolution='average', separate=False, proj_difference=False):
+def cmd_gdalbuildvrt(infiles, outfile, resolution='average', separate=False, proj_difference=False, extra=[]):
     cmd = [gdalbuildvrt_exe]
     cmd += ['-q']
     if resolution != 'average':
@@ -172,7 +172,7 @@ def cmd_gdalbuildvrt(infiles, outfile, resolution='average', separate=False, pro
         cmd += ['-separate']
     if proj_difference:
         cmd += ['-allow_projection_difference']
-    cmd += []
+    cmd += extra
     cmd += [outfile]
     cmd += infiles
     return cmd
