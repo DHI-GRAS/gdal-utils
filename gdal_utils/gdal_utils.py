@@ -1,9 +1,10 @@
 import os
-import subprocess
 import shutil
 import glob
 import tempfile
 import warnings
+import logging
+import subprocess
 
 import gdal
 import osr
@@ -12,6 +13,8 @@ import sys
 import ogr
 
 from .gdal_scripts import gdal_merge as gdal_merge_py
+
+logger = logging.getLogger('gdal_utils.gdal_utils')
 
 
 def find_gdal_exe(gdalcmd):
@@ -245,7 +248,22 @@ def retrieve_array_masked(infile, iband=None, tgt_dtype=None):
 
 
 def get_array(ds, iband=None, tgt_dtype=None, tgt_nodata=None):
-    """Returns a masked array from open GDAL dataset"""
+    """Returns a masked array from open GDAL dataset
+
+    Parameters
+    ----------
+    ds : gdal.Open
+        Dataset
+    iband : int
+        1-based band number
+        default: all bands
+    tgt_dtype : dtype
+        convert to this dtype
+        default: same as input
+    tgt_nodata : float, int
+        target no-data values
+        default: matches tgt_dtype
+    """
     if iband is None:
         # read all bands
         a = ds.ReadAsArray()
@@ -263,7 +281,10 @@ def get_array(ds, iband=None, tgt_dtype=None, tgt_nodata=None):
             # integer
             mask = a == src_nodata
     else:
-        mask = ~np.isfinite(a)
+        try:
+            mask = ~np.isfinite(a)
+        except TypeError:
+            mask = False
     tgt_dtype = tgt_dtype or str(a.dtype)
     tgt_nodata = tgt_nodata if tgt_nodata is not None else get_default_nodata(tgt_dtype)
     a_masked = np.ma.masked_where(mask, a, copy=False)
@@ -485,7 +506,7 @@ def gdal_set_nodata(tiffile, tempdir=None, src_nodata=None):
     shutil.move(tiffile, temptif)
     try:
         data = retrieve_array_masked(temptif, iband=None)
-        data[data == 0] = np.ma.masked
+        data[data == src_nodata] = np.ma.masked
         save_same_format(temptif, tiffile, data)
     except Exception as e:
         try:
@@ -498,6 +519,8 @@ def gdal_set_nodata(tiffile, tempdir=None, src_nodata=None):
         try:
             os.remove(temptif)
         except OSError:
+            logger.warn('Temporary file could not be removed. '
+                    'Remove manually: \'{}\'.'.format(temptif))
             pass
 
 
@@ -748,7 +771,7 @@ def calcMinCoveringExtent(imgA, imgB):
     return [minX, maxY, maxX, minY]
 
 
-def rasterize(in_vector, out_raster, pixel_size=25):
+def rasterize(in_vector, out_raster='MEM', pixel_size=25):
     # Define pixel_size and NoData value of new raster
     NoData_value = np.nan
 
