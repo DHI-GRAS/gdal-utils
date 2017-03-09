@@ -61,3 +61,20 @@ def shp2wkt(inshp):
         return geometry.ExportToWkt()
     finally:
         ds.Destroy()
+
+
+class ogr_open:
+
+    def __init__(self, fname):
+        """ogr.Open with check
+        """
+        self.file = ogr.Open(fname)
+        if self.file is None:
+            raise IOError(
+                "Loading file '{}' with OGR failed".format(fname))
+
+    def __enter__(self):
+        return self.file
+
+    def __exit__(self, type, value, traceback):
+        self.file = None
