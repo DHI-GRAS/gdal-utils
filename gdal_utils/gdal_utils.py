@@ -727,10 +727,11 @@ def cutline_to_shape_name(intif, inshp, t_srs=None):
     return gdal.Open(outtif)
 
 
-def gdal_merge(infiles, outfile):
+def gdal_merge(infiles, outfile, cmd_extra=[]):
     """Gdal merge"""
     cmd = []
     cmd += ['-o', outfile]
+    cmd += cmd_extra
     cmd += infiles
     gdal_merge_py.main(cmd)
     check_gdal_success(outfile, cmd)
