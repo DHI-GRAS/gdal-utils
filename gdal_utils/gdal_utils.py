@@ -1,7 +1,7 @@
 import os
 import shutil
 import logging
-import subprocess
+import tempfile
 
 import gdal
 import osr
@@ -10,8 +10,6 @@ import sys
 import ogr
 
 from .gdal_scripts import gdal_merge as gdal_merge_py
-from .gdal_binaries import gdal_rasterize_exe
-from .gdal_binaries import cutline
 
 logger = logging.getLogger('gdal_utils.gdal_utils')
 
@@ -349,53 +347,37 @@ def dump_gtiff(dsmem, outfile):
     drv.CreateCopy(outfile, dsmem)
 
 
-def gdal_set_nodata(tiffile, tempdir=None, src_nodata=None):
-    """Set value to nodata on tiffile "in-place"
+def set_nodata(infile, outfile, src_nodata=None):
+    """Set nodata value on infile and save as outfile"""
+    data = retrieve_array_masked(infile, iband=None)
+    data[data == src_nodata] = np.ma.masked
+    save_same_format(infile, outfile, data)
+
+
+def set_nodata_inplace(infile, src_nodata=None):
+    """Set value to nodata on infile "in-place"
 
     Parameters
     ----------
-    tiffile : str
+    infile : str
         path to tif file to modify
-    tempdir : str
-        path to temporary files dir (optional)
     src_nodata : int, float
         value to mask
     """
-    if tempdir is None:
-        tempdir = os.path.dirname(tiffile)
-    fname = '{}_temp{}'.format(*os.path.splitext(os.path.basename(tiffile)))
-    temptif = os.path.join(tempdir, fname)
-    shutil.move(tiffile, temptif)
+    tempdir = tempfile.mkdtemp()
     try:
-        data = retrieve_array_masked(temptif, iband=None)
-        data[data == src_nodata] = np.ma.masked
-        save_same_format(temptif, tiffile, data)
-    except Exception as e:
-        try:
-            os.remove(tiffile)
-            shutil.move(temptif, tiffile)
-        except OSError:
-            pass
-        raise e
+        tempcopy = os.path.join(tempdir, 'temp_copy.tif')
+        tempnodata = os.path.join(tempdir, 'temp_nodata.tif')
+        shutil.copy2(infile, tempcopy)
+        set_nodata(tempcopy, tempnodata)
+        shutil.copy(tempnodata, infile)
     finally:
         try:
-            os.remove(temptif)
+            shutil.rmtree(tempdir)
         except OSError:
-            logger.warn('Temporary file could not be removed. '
-                    'Remove manually: \'{}\'.'.format(temptif))
-            pass
-
-
-def burn_shp_to_raster(shp_in, tif_template, outfile, burn_val):
-    """Burn a shape file to an empty raster"""
-    if os.path.isfile(outfile):
-        os.remove(outfile)
-    create_empty_like(tif_template, outfile,
-            tgt_nodata=255, tgt_dtype='uint8')
-    cmd = gdal_rasterize_exe
-    cmd += ' -at -burn {} {} {}'.format(burn_val, shp_in, outfile)
-    subprocess.call(cmd)
-    check_gdal_success(outfile, cmd)
+            logger.warn(
+                    'Temporary directory could not be removed. '
+                    'Remove manually: \'{}\'.'.format(tempdir))
 
 
 def create_empty_like(tif_template, outfile, tgt_dtype, tgt_nodata=None):
@@ -481,11 +463,9 @@ def cutline_to_shape_name(intif, inshp, t_srs=None):
     Warning
     -------
     This function makes some terrible assumptions about existing directories.
-
-    TODO
-    ----
-    Move this to Bathy. It should never be used elsewhere.
     """
+    # TODO: Move this to Bathy. It should never be used elsewhere.
+    from . import gdal_binaries
     # test if it is a gdal image or a string the are used
     try:
         # if gdal image, the close it and use the file name
@@ -506,7 +486,7 @@ def cutline_to_shape_name(intif, inshp, t_srs=None):
 
     shape_name = os.path.splitext(os.path.basename(inshp))[0]
     outtif = os.path.join(os.path.dirname(img_path), shape_name + '.tif')
-    cutline(img_path, inshp, outtif, t_srs)
+    gdal_binaries.cutline(img_path, inshp, outtif, t_srs)
     return gdal.Open(outtif)
 
 

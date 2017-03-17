@@ -10,6 +10,7 @@ import logging
 if 'rasterio' not in sys.modules:
     from .gdal_utils import get_file_nodata
     from .gdal_utils import get_resolution
+    from .gdal_utils import create_empty_like
 else:
     raise NotImplementedError('Rasterio detected. This is not yet supported.')
 
@@ -271,3 +272,14 @@ def gdal_compress(infile, outfile, compress, extra=''):
     subprocess.call(cmd)
     if not os.path.isfile(outfile):
         raise RuntimeError('GDAL compression not successful with command \'{}\'.'.format(cmd))
+
+
+def burn_shp_to_raster(shp_in, tif_template, outfile, burn_val):
+    """Burn a shape file to an empty raster"""
+    if os.path.isfile(outfile):
+        os.remove(outfile)
+    create_empty_like(tif_template, outfile,
+            tgt_nodata=255, tgt_dtype='uint8')
+    cmd = gdal_rasterize_exe
+    cmd += ' -at -burn {} {} {}'.format(burn_val, shp_in, outfile)
+    run_cmd(cmd, outfile)
