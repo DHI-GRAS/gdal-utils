@@ -7,12 +7,9 @@ import warnings
 import subprocess
 import logging
 
-if 'rasterio' not in sys.modules:
-    from .gdal_utils import get_file_nodata
-    from .gdal_utils import get_resolution
-    from .gdal_utils import create_empty_like
-else:
-    raise NotImplementedError('Rasterio detected. This is not yet supported.')
+from .gdal_utils import get_file_nodata
+from .gdal_utils import get_resolution
+from .gdal_utils import create_empty_like
 
 logger = logging.getLogger(__name__)
 
@@ -234,20 +231,22 @@ def cutline(intif, inshp, outtif=None, t_srs=None, **kwargs):
         tempdir = tempfile.mkdtemp()
         outtif = os.path.join(tempdir, 'temp.tif')
         inplace = True
-    # run gdalwarp cutline
-    if t_srs:
-        cmd = cmd_gdalwarp_reproject_cutline(intif, inshp, outtif, t_srs, **kwargs)
-    else:
-        cmd = cmd_gdalwarp_cutline(intif, inshp, outtif, **kwargs)
-    run_cmd(cmd, outtif)
-    # move temp file to infile for in-place
-    if inplace:
-        shutil.copyfile(outtif, intif)
-        try:
-            shutil.rmtree(tempdir)
-        except OSError:
-            warnings.warn('Temporary files were not removed from \'{}\'.'.format(tempdir))
-            pass
+    try:
+        # run gdalwarp cutline
+        if t_srs:
+            cmd = cmd_gdalwarp_reproject_cutline(intif, inshp, outtif, t_srs, **kwargs)
+        else:
+            cmd = cmd_gdalwarp_cutline(intif, inshp, outtif, **kwargs)
+        run_cmd(cmd, outtif)
+        # move temp file to infile for in-place
+        if inplace:
+            shutil.copyfile(outtif, intif)
+    finally:
+        if tempdir is not None:
+            try:
+                shutil.rmtree(tempdir)
+            except OSError:
+                warnings.warn('Temporary files were not removed from \'{}\'.'.format(tempdir))
 
 
 def gdal_compress(infile, outfile, compress, extra=''):
