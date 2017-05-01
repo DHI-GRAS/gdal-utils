@@ -53,7 +53,8 @@ def run_cmd(cmd, outfile):
                 'cmd \'{}\'.'.format(cmdstr))
 
 
-def cmd_gdalwarp_cutline(intif, inshp, outtif, preserve_resolution=True, extra=[]):
+def cmd_gdalwarp_cutline(intif, inshp, outtif, preserve_resolution=True,
+        overwrite=True, r=None, extra=[]):
     if os.path.isfile(outtif):
         os.remove(outtif)
     dstnodata = get_file_nodata(intif)
@@ -61,6 +62,10 @@ def cmd_gdalwarp_cutline(intif, inshp, outtif, preserve_resolution=True, extra=[
     if preserve_resolution and '-tr' not in extra:
         xres, yres = get_resolution(intif)
         cmd += ['-tr', str(xres), str(yres)]
+    if overwrite:
+        cmd += ['-overwrite']
+    if r is not None:
+        cmd += ['-r', r]
     cmd += ['-cutline', inshp]
     cmd += ['-crop_to_cutline']
     cmd += ['-dstnodata', str(dstnodata)]
@@ -79,15 +84,16 @@ def cmd_gdalwarp_reproject(infile, t_srs, outfile, r='near'):
     return cmd
 
 
-def cmd_gdalwarp_reproject_cutline(intif, inshp, outtif, t_srs, r='near',
+def cmd_gdalwarp_reproject_cutline(intif, inshp, outtif, t_srs, r=None,
         preserve_resolution=True, extra=[]):
     dstnodata = get_file_nodata(intif)
     cmd = [gdalwarp_exe]
     if preserve_resolution and '-tr' not in extra:
         xres, yres = get_resolution(intif)
         cmd += ['-tr', str(xres), str(yres)]
+    if r is not None:
+        cmd += ['-r', r]
     cmd += ['-t_srs', t_srs]
-    cmd += ['-r', r]
     cmd += ['-cutline', inshp]
     cmd += ['-crop_to_cutline']
     cmd += ['-dstnodata', str(dstnodata)]
