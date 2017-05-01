@@ -491,7 +491,8 @@ def cutline_to_shape_name(intif, inshp, t_srs=None):
 
 
 def gdal_merge(infiles, outfile, cmd_extra=[]):
-    """Gdal merge """
+    """Gdal merge
+    cmd_extra : e.g '-separate, -of HFA, -co, COMPRESSED=YES'   """
     cmd = []
     cmd += ['-o', outfile]
     cmd += cmd_extra
