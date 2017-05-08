@@ -255,23 +255,24 @@ def array_to_gtiff(arr, outfile, projection, geotransform, banddim=0,
 
     Parameters
     ----------
-    arr: ndarray
+    arr : ndarray
         a (n, m, b) matrix, where b is the band number,
         n and m is the row and collum size of the matrices.
-    outfile: str
-        filename
-    projection: str
+    outfile : str
+        path to output file
+    projection : str
         image projection
-    geotransform:
+    geotransform : GDAL GeoTransform sequence
         image geotransform
-    banddim:
+    banddim : int
+        index of band dimension in arr
         swapping of axis if (n, m, b) is not in the correct order
     tgt_nodata: float, int
         target nodata value
-    create_options:
+    create_options : list of str
         passed to gdal.Create
-    dtype: 9
-        Sets the output file to the desied dtype
+    dtype : dtype or str
+        output data type
 
     Returns
     -------
@@ -345,6 +346,25 @@ def dump_gtiff(dsmem, outfile):
     """Dump MEM dataset to GeoTIFF outfile"""
     drv = gdal.GetDriverByName('GTiff')
     drv.CreateCopy(outfile, dsmem)
+
+
+def ds_to_gtiff(dsmem, outfile, **kwargs):
+    """Save a GDAL dataset to GeoTIFF
+
+    Parameters
+    ----------
+    dsmem : GDAL dataset
+        dataset to save
+    outfile : str
+        path to output file
+    **kwargs : additional keyword arguments
+        passed to array_to_gtiff
+    """
+    kwargs.update(
+            geotransform=dsmem.GetGeoTransform(),
+            projection=dsmem.GetProjection())
+    array = dsmem.ReadAsArray()
+    return array_to_gtiff(array, outfile, **kwargs)
 
 
 def set_nodata(infile, outfile, src_nodata=None):
@@ -562,7 +582,6 @@ def rasterize(in_vector, out_raster='MEM', pixel_size=25):
     # Rasterize
     gdal.RasterizeLayer(target_ds, [1], source_layer, burn_values=[1])
 
-    source_ds = None
     return target_ds
 
 
