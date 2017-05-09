@@ -482,7 +482,7 @@ def cutline_to_shape_name(intif, inshp, t_srs=None):
 
     Warning
     -------
-    This function makes some terrible assumptions about existing directories.
+    This function makes vast assumptions about existing directories.
     """
     # TODO: Move this to Bathy. It should never be used elsewhere.
     from . import gdal_binaries
