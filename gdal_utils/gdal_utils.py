@@ -348,12 +348,12 @@ def dump_gtiff(dsmem, outfile):
     drv.CreateCopy(outfile, dsmem)
 
 
-def ds_to_gtiff(dsmem, outfile, **kwargs):
+def ds_to_gtiff(ds, outfile, **kwargs):
     """Save a GDAL dataset to GeoTIFF
 
     Parameters
     ----------
-    dsmem : GDAL dataset
+    ds : GDAL dataset
         dataset to save
     outfile : str
         path to output file
@@ -361,9 +361,10 @@ def ds_to_gtiff(dsmem, outfile, **kwargs):
         passed to array_to_gtiff
     """
     kwargs.update(
-            geotransform=dsmem.GetGeoTransform(),
-            projection=dsmem.GetProjection())
-    array = dsmem.ReadAsArray()
+            geotransform=ds.GetGeoTransform(),
+            projection=ds.GetProjection(),
+            banddim=0)
+    array = get_array(ds)
     return array_to_gtiff(array, outfile, **kwargs)
 
 
