@@ -292,7 +292,7 @@ def array_to_gtiff(arr, outfile, projection, geotransform, banddim=0,
     # TODO: Find and resolve this issue
     tgt_nodata = int(tgt_nodata)
 
-    arr = np.ma.masked_invalid(arr).filled(tgt_nodata)
+    arr = np.ma.masked_invalid(arr, copy=False).filled(tgt_nodata)
 
     # get array into right format
     if np.ndim(arr) == 3:
