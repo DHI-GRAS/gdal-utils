@@ -74,12 +74,13 @@ def cmd_gdalwarp_cutline(intif, inshp, outtif, preserve_resolution=True,
     return cmd
 
 
-def cmd_gdalwarp_reproject(infile, t_srs, outfile, r='near'):
+def cmd_gdalwarp_reproject(infile, t_srs, outfile, r='near', extra=[]):
     dstnodata = get_file_nodata(infile)
     cmd = [gdalwarp_exe]
     cmd += ['-t_srs', t_srs]
     cmd += ['-r', r]
     cmd += ['-dstnodata', str(dstnodata)]
+    cmd += extra
     cmd += [infile, outfile]
     return cmd
 
