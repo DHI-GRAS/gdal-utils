@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='gdal_utils',
-    version='0.2',
+    version='0.3',
     description='GDAL and OGR Utilities',
     author='Jonas Solvsteen',
     author_email='josl@dhi-gras.com',
