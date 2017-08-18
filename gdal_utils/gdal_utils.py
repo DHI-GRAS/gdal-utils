@@ -152,6 +152,8 @@ def get_array(ds, iband=None, tgt_dtype=None, tgt_nodata=None):
 
 
 def make_gdalstr(fname, group=None, varn=None):
+    if not fname:
+        raise ValueError('Invalid file name \'{}\'.'.format(fname))
     if fname.lower().endswith('.nc') and varn is not None:
         gdalstr = 'NETCDF:{}:{}'.format(fname, varn)
     if fname.lower().endswith('.hdf') and varn is not None and group is not None:
@@ -461,7 +463,8 @@ def warp_reproject_py(infile, outfile, t_epsg=4326, r='near'):
         raise ValueError('Resampling `r` should be \'near\' or \'bilinear\'.')
 
     with gdal_open(infile) as src_ds:
-        # Call AutoCreateWarpedVRT() to fetch default values for target raster dimensions and geotransform
+        # Call AutoCreateWarpedVRT() to fetch default values
+        # for target raster dimensions and geotransform
         tmp_ds = gdal.AutoCreateWarpedVRT(src_ds,
                                           None,  # src_wkt
                                           dst_wkt,
@@ -492,7 +495,7 @@ def cutline_to_shape_name(intif, inshp, t_srs=None):
         # if gdal image, the close it and use the file name
         if intif.GetFileList() is None:
             data = np.zeros((intif.RasterCount, intif.RasterYSize, intif.RasterXSize), dtype=float)
-            for band in xrange(intif.RasterCount):
+            for band in range(intif.RasterCount):
                 data[band, :, :] = intif.GetRasterBand(band + 1).ReadAsArray()
             img_path = os.path.join(
                     os.path.dirname(os.path.dirname(inshp)),
@@ -552,8 +555,12 @@ def calcMinCoveringExtent(imgA, imgB):
     bGeoTrans = imgB.GetGeoTransform()
     minX = max(aGeoTrans[0], bGeoTrans[0])
     maxY = min(aGeoTrans[3], bGeoTrans[3])
-    maxX = min(aGeoTrans[0] + imgA.RasterXSize*aGeoTrans[1], bGeoTrans[0] + imgB.RasterXSize*bGeoTrans[1])
-    minY = max(aGeoTrans[3] + imgA.RasterYSize*aGeoTrans[5], bGeoTrans[3] + imgB.RasterYSize*bGeoTrans[5])
+    maxX = min(
+            aGeoTrans[0] + imgA.RasterXSize*aGeoTrans[1],
+            bGeoTrans[0] + imgB.RasterXSize*bGeoTrans[1])
+    minY = max(
+            aGeoTrans[3] + imgA.RasterYSize*aGeoTrans[5],
+            bGeoTrans[3] + imgB.RasterYSize*bGeoTrans[5])
     return [minX, maxY, maxX, minY]
 
 
@@ -590,29 +597,29 @@ def clipRasterWithShape(rasterImg, shapeImg):
     """Cutline returning MEM"""
     # get the raster pixels size and extent
     # rasterImg = gdal.Open(raster,gdal.GA_ReadOnly)
-    rasterGeoTrans = rasterImg.GetGeoTransform()
+    gt = rasterImg.GetGeoTransform()
 
     # rasterize the shape and get its extent
-    shapeRasterImg = rasterize(shapeImg, 'MEM', rasterGeoTrans[1])
-    shapeRasterGeoTrans = shapeRasterImg.GetGeoTransform()
+    rasterizedImg = rasterize(shapeImg, 'MEM', gt[1])
+    gt_rasterized = rasterizedImg.GetGeoTransform()
 
     # make sure that raster and shapeRaster pixels are co-aligned
-    ulX = rasterGeoTrans[0] + round((shapeRasterGeoTrans[0] - rasterGeoTrans[0]) / rasterGeoTrans[1]) * rasterGeoTrans[
+    ulX = gt[0] + round((gt_rasterized[0] - gt[0]) / gt[1]) * gt[
         1]
-    ulY = rasterGeoTrans[3] + round((shapeRasterGeoTrans[3] - rasterGeoTrans[3]) / rasterGeoTrans[5]) * rasterGeoTrans[
+    ulY = gt[3] + round((gt_rasterized[3] - gt[3]) / gt[5]) * gt[
         5]
-    shapeRasterGeoTrans = (
-            ulX, shapeRasterGeoTrans[1], shapeRasterGeoTrans[2],
-            ulY, shapeRasterGeoTrans[4], shapeRasterGeoTrans[5])
+    gt_rasterized = (
+            ulX, gt_rasterized[1], gt_rasterized[2],
+            ulY, gt_rasterized[4], gt_rasterized[5])
 
     # get minimum covering extent for the raster and the shape and covert them
     # to pixels
-    minX, maxY, maxX, minY = calcMinCoveringExtent(rasterImg, shapeRasterImg)
-    rasterSubsetPixs = world2Pixel(rasterGeoTrans, minX, maxY) + world2Pixel(rasterGeoTrans, maxX, minY)
-    shapeRasterSubsetPixs = world2Pixel(shapeRasterGeoTrans, minX, maxY) + world2Pixel(shapeRasterGeoTrans, maxX, minY)
+    minX, maxY, maxX, minY = calcMinCoveringExtent(rasterImg, rasterizedImg)
+    rasterSubsetPixs = world2Pixel(gt, minX, maxY) + world2Pixel(gt, maxX, minY)
+    shapeRasterSubsetPixs = world2Pixel(gt_rasterized, minX, maxY) + world2Pixel(gt_rasterized, maxX, minY)
 
     # clip the shapeRaster to min covering extent
-    shapeRasterData = shapeRasterImg.GetRasterBand(1).ReadAsArray()
+    shapeRasterData = rasterizedImg.GetRasterBand(1).ReadAsArray()
     shapeRasterClipped = shapeRasterData[shapeRasterSubsetPixs[1]:shapeRasterSubsetPixs[3],
                          shapeRasterSubsetPixs[0]:shapeRasterSubsetPixs[2]]
     mask = shapeRasterClipped > 0
@@ -629,7 +636,7 @@ def clipRasterWithShape(rasterImg, shapeImg):
         maskedData[:, :, band] = np.where(mask, clippedData, 0)
 
     # get the geotransform array for the masekd array
-    maskedGeoTrans = (ulX, rasterGeoTrans[1], rasterGeoTrans[2], ulY, rasterGeoTrans[4], rasterGeoTrans[5])
+    maskedGeoTrans = (ulX, gt[1], gt[2], ulY, gt[4], gt[5])
 
     # save the masked img to memory and return it
     return array_to_gtiff(maskedData, "MEM", rasterImg.GetProjection(), maskedGeoTrans, banddim=2)
@@ -659,9 +666,12 @@ def buffer_extent(extent, geotransform):
     Geotransform is GDAL geotransform
     """
     e = extent
-    # From what I could figure out gdal_translate first shifts the extent north-west until UL corner aligns
-    # with a UL corner of a pixel in the source layer. Then the BR corner is rounded to the BR corner of
-    # the closest pixel. So if the north(west) pixel is closer then south(east) then the clipped layer will
+    # From what I could figure out gdal_translate first
+    # shifts the extent north-west until UL corner aligns
+    # with a UL corner of a pixel in the source layer. Then
+    # the BR corner is rounded to the BR corner of
+    # the closest pixel. So if the north(west) pixel is closer
+    # then south(east) then the clipped layer will
     # not include all of the area specified in the extent.
     shiftWest = float(e[0]) % geotransform[1]
     if 0 < float(e[1]) % geotransform[1] / geotransform[1] < 0.5:
