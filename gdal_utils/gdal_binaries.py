@@ -53,14 +53,14 @@ def run_cmd(cmd, outfile):
                 'cmd \'{}\'.'.format(cmdstr))
 
 
-def cmd_gdalwarp_cutline(intif, inshp, outtif, preserve_resolution=True,
+def cmd_gdalwarp_cutline(infile, inshp, outfile, preserve_resolution=True,
         overwrite=True, r=None, extra=[]):
-    if os.path.isfile(outtif):
-        os.remove(outtif)
-    dstnodata = get_file_nodata(intif)
+    if os.path.isfile(outfile):
+        os.remove(outfile)
+    dstnodata = get_file_nodata(infile)
     cmd = [gdalwarp_exe]
     if preserve_resolution and '-tr' not in extra:
-        xres, yres = get_resolution(intif)
+        xres, yres = get_resolution(infile)
         cmd += ['-tr', str(xres), str(yres)]
     if overwrite:
         cmd += ['-overwrite']
@@ -70,7 +70,7 @@ def cmd_gdalwarp_cutline(intif, inshp, outtif, preserve_resolution=True,
     cmd += ['-crop_to_cutline']
     cmd += ['-dstnodata', str(dstnodata)]
     cmd += extra
-    cmd += [intif, outtif]
+    cmd += [infile, outfile]
     return cmd
 
 
@@ -85,12 +85,12 @@ def cmd_gdalwarp_reproject(infile, t_srs, outfile, r='near', extra=[]):
     return cmd
 
 
-def cmd_gdalwarp_reproject_cutline(intif, inshp, outtif, t_srs, r=None,
+def cmd_gdalwarp_reproject_cutline(infile, inshp, outfile, t_srs, r=None,
         preserve_resolution=True, extra=[]):
-    dstnodata = get_file_nodata(intif)
+    dstnodata = get_file_nodata(infile)
     cmd = [gdalwarp_exe]
     if preserve_resolution and '-tr' not in extra:
-        xres, yres = get_resolution(intif)
+        xres, yres = get_resolution(infile)
         cmd += ['-tr', str(xres), str(yres)]
     if r is not None:
         cmd += ['-r', r]
@@ -99,11 +99,13 @@ def cmd_gdalwarp_reproject_cutline(intif, inshp, outtif, t_srs, r=None,
     cmd += ['-crop_to_cutline']
     cmd += ['-dstnodata', str(dstnodata)]
     cmd += extra
-    cmd += [intif, outtif]
+    cmd += [infile, outfile]
     return cmd
 
 
-def cmd_gdalbuildvrt(infiles, outfile, resolution='average', separate=False, proj_difference=False, extra=[]):
+def cmd_gdalbuildvrt(
+        infiles, outfile, resolution='average',
+        separate=False, proj_difference=False, extra=[]):
     cmd = [gdalbuildvrt_exe]
     cmd += ['-q']
     if resolution != 'average':
@@ -214,18 +216,18 @@ def translate(infile, outfile, **kwargs):
     run_cmd(cmd, outfile)
 
 
-def cutline(intif, inshp, outtif=None, t_srs=None, **kwargs):
+def cutline(infile, inshp, outfile=None, t_srs=None, **kwargs):
     """GDAL gdalwarp cutline with default parameters
 
     Parameters
     ----------
-    intif : str
+    infile : str
         path to input tif
     inshp : str
         path to input shape file
-    outtif : str or None
+    outfile : str or None
         path to output tif
-        if not defined, intif will be overwritten
+        if not defined, infile will be overwritten
     t_srs : str
         t_srs
     kwargs : dict
@@ -234,20 +236,20 @@ def cutline(intif, inshp, outtif=None, t_srs=None, **kwargs):
     """
     inplace = False
     tempdir = None
-    if outtif is None or outtif == intif:
+    if outfile is None or outfile == infile:
         tempdir = tempfile.mkdtemp()
-        outtif = os.path.join(tempdir, 'temp.tif')
+        outfile = os.path.join(tempdir, 'temp.tif')
         inplace = True
     try:
         # run gdalwarp cutline
         if t_srs:
-            cmd = cmd_gdalwarp_reproject_cutline(intif, inshp, outtif, t_srs, **kwargs)
+            cmd = cmd_gdalwarp_reproject_cutline(infile, inshp, outfile, t_srs, **kwargs)
         else:
-            cmd = cmd_gdalwarp_cutline(intif, inshp, outtif, **kwargs)
-        run_cmd(cmd, outtif)
+            cmd = cmd_gdalwarp_cutline(infile, inshp, outfile, **kwargs)
+        run_cmd(cmd, outfile)
         # move temp file to infile for in-place
         if inplace:
-            shutil.copyfile(outtif, intif)
+            shutil.copyfile(outfile, infile)
     finally:
         if tempdir is not None:
             try:
@@ -256,7 +258,7 @@ def cutline(intif, inshp, outtif=None, t_srs=None, **kwargs):
                 warnings.warn('Temporary files were not removed from \'{}\'.'.format(tempdir))
 
 
-def gdal_compress(infile, outfile, compress, extra=''):
+def gdal_compress(infile, outfile, compress, extra=[]):
     """Use gdal_translate to save a compressed version of the file
        preserving nodata
 
@@ -267,14 +269,18 @@ def gdal_compress(infile, outfile, compress, extra=''):
         outfile will be overwritten if exists
     compress : str
         e.g. LZW or DEFLATE
-    extra : str
+    extra : list of str
         extra flags to gdal_translate
     """
     if os.path.exists(outfile):
         os.remove(outfile)
     src_nodata = get_file_nodata(infile)
-    cmd = gdal_translate_exe
-    cmd += ' -co COMPRESS={} -a_nodata {} {} {} {}'.format(compress, src_nodata, extra, infile, outfile)
+    cmd = [gdal_translate_exe]
+    cmd += ['-co', 'COMPRESS={}'.format(compress)]
+    cmd += ['-a_nodata', str(src_nodata)]
+    cmd += extra
+    cmd += [infile, outfile]
+    cmd = ' '.join(cmd)
     subprocess.call(cmd)
     if not os.path.isfile(outfile):
         raise RuntimeError('GDAL compression not successful with command \'{}\'.'.format(cmd))
