@@ -106,7 +106,7 @@ def rasterize(src, dst, update=False,
     #Open the vector layer to rasterize from
     src_ds = ogr.Open(src)
     if not src_ds:
-        raise RuntimeError,'\'%s\' does not exist in the file system.' % src
+        raise RuntimeError('\'%s\' does not exist in the file system.' % src)
     if sql:
         src_lyr = ds.ExecuteSQL(sql)
     else:
